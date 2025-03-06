@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Recommender System</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+
+  <script type="text/javascript">
+    var films = {{suggestions|tojson}};
+  </script>
+
+  <style>
+    /* General Styles */
+    body {
+        background: url("{{ url_for('static', filename='image.jpg') }}") no-repeat center center fixed;
+        background-size: cover;
+        color: #333333; /* Dark Gray Text */
+        font-family: 'IBM Plex Sans', sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+    }
+    h1, h2, h3 {
+        color: #666666; /* Medium Gray */
+    }
+    .ml-container {
+        background-color: rgba(169, 169, 169, 0.8); /* Semi-transparent Dark Gray */
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px auto;
+        width: 50%;
+        max-width: 600px;
+        box-shadow: 2px 2px 10px #555555;
+    }
+    .form-group {
+        margin: 15px 0;
+    }
+    .search-container {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+    input[type="search"] {
+        padding: 10px;
+        width: 80%;
+        max-width: 400px;
+        border: 2px solid #555555;
+        border-radius: 5px;
+        background-color: #D3D3D3; /* Light Gray */
+        color: #333333;
+    }
+    input[type="search"]::placeholder {
+        color: #4F4F4F;
+    }
+    .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #333333;
+    }
+    button {
+        background-color: #696969; /* Dim Gray */
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+        width: 80%;
+        max-width: 200px;
+    }
+    button:disabled {
+        background-color: #A9A9A9; /* Dark Gray */
+    }
+    .fail {
+        display: none;
+        color: #B0B0B0; /* Gray */
+    }
+    .results {
+        margin-top: 20px;
+    }
+    #loader {
+        display: none;
+        width: 50px;
+        height: 50px;
+        border: 5px solid #B0B0B0;
+        border-top: 5px solid #333333;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .ml-container {
+            width: 80%;
+            padding: 15px;
+        }
+        input[type="search"] {
+            width: 90%;
+        }
+        button {
+            width: 90%;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .ml-container {
+            width: 90%;
+            padding: 10px;
+        }
+        input[type="search"] {
+            width: 100%;
+        }
+        button {
+            width: 100%;
+        }
+    }
+
+    /* Autocomplete Suggestions Styling */
+    .autoComplete_wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        margin: auto;
+    }
+
+    /* Style the dropdown list */
+    .autoComplete_results_list {
+        position: absolute;
+        top: 100%; /* Places the dropdown directly below the input */
+        left: 0;
+        width: 100%;
+        background: rgba(169, 169, 169, 0.9); /* Semi-transparent Dark Gray */
+        border: 1px solid #555;
+        border-radius: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        padding: 5px 0;
+        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Style each suggestion item */
+    .autoComplete_result {
+        padding: 10px;
+        cursor: pointer;
+        color: white;
+        background-color: #696969; /* Dim Gray */
+        transition: background 0.3s ease-in-out;
+    }
+
+    /* Highlight hovered suggestion with Dark Green */
+    .autoComplete_result:hover,
+    .autoComplete_result[aria-selected="true"] {
+        background: #006400; /* Dark Green */
+        color: #FFD700; /* Gold text for better visibility */
+    }
+
+    /* Optional: Add a smooth scrolling effect */
+    .autoComplete_results_list {
+        scrollbar-width: thin;
+        scrollbar-color: #666 #333;
+    }
+
+    .autoComplete_results_list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .autoComplete_results_list::-webkit-scrollbar-thumb {
+        background: #666;
+        border-radius: 10px;
+    }
+
+    .autoComplete_results_list::-webkit-scrollbar-track {
+        background: #333;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="ml-container">
+    <center><h1>Movie Recommendation System</h1></center>
+    
+    <div class="form-group">
+        <div class="search-container">
+            <input type="search" name="movie" class="movie" id="autoComplete" autocomplete="off" placeholder="Enter the Movie Name/title" required="required" />
+            <i class="fa fa-search search-icon"></i>
+        </div>
+        <br>
+    </div>
+
+    <div class="form-group">
+      <button class="btn movie-button" disabled="true">
+        Search
+      </button><br><br>
+    </div>
+  </div>
+
+  <div id="loader"></div>
+  
+  <div class="fail">
+    <center><h3>Sorry! Try another movie name/title</h3></center>
+  </div>
+
+  <div class="results">
+    <center>
+      <h2 id="name" class="text-uppercase"></h2>
+    </center>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@7.2.0/dist/js/autoComplete.min.js"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='autocomplete.js')}}"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='recommend.js')}}"></script>
+</body>
+</html>
